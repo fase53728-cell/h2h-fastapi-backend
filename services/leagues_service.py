@@ -76,10 +76,9 @@ def get_team_row(league_id: str, team_id: str) -> Optional[Dict[str, object]]:
     if not league_dir:
         return None
 
-    # tenta nome exato
     csv_path = league_dir / f"{team_id}.csv"
     if not csv_path.exists():
-        # tenta trocar espaços por underline
+        # tenta normalizar nome
         alt = team_id.replace(" ", "_")
         csv_path = league_dir / f"{alt}.csv"
         if not csv_path.exists():
