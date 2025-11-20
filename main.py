@@ -16,7 +16,7 @@ app = FastAPI(
     ),
 )
 
-# CORS liberado (ajuste depois se quiser travar por domínio)
+# CORS liberado
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -41,18 +41,12 @@ async def root():
 
 @app.get("/leagues")
 async def get_leagues():
-    """
-    Lista todas as ligas disponíveis (pastas dentro de data/leagues).
-    """
     leagues = list_leagues()
     return {"leagues": leagues}
 
 
 @app.get("/leagues/{league_id}/teams")
 async def get_teams(league_id: str):
-    """
-    Lista todos os times de uma liga (com base nos CSVs por time).
-    """
     teams = list_teams_from_league(league_id)
     if not teams:
         raise HTTPException(status_code=404, detail="Liga não encontrada ou sem times")
@@ -61,10 +55,7 @@ async def get_teams(league_id: str):
 
 @app.get("/leagues/{league_id}/team/{team_id}")
 async def get_team(league_id: str, team_id: str):
-    """
-    Retorna os dados (linha única) do CSV do time dentro da liga.
-    """
     row = get_team_row(league_id, team_id)
     if row is None:
-        raise HTTPException(status_code=404, detail="Time não encontrado para essa liga")
+        raise HTTPException(status_code=404, detail="Time não encontrado nessa liga")
     return row
