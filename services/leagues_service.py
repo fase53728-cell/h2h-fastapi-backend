@@ -5,93 +5,93 @@ from typing import List, Dict, Optional
 import pandas as pd
 
 from config import DATA_DIR
-from utils.team_normalizer import normalize_name
-
-
-def _slugify(name: str) -> str:
-    """
-    Transforma 'France Ligue 1' em 'france-ligue-1'.
-    Usado como league_id nas rotas.
-    """
-    return (
-        str(name)
-        .strip()
-        .lower()
-        .replace(".csv", "")
-        .replace("_", "-")
-        .replace(" ", "-")
-    )
 
 
 def list_leagues() -> List[Dict[str, str]]:
     """
-    Lista todos os CSVs da pasta data/leagues
-    e monta uma lista de ligas.
+    Lista as ligas disponíveis como pastas dentro de data/leagues.
+    Exemplo: data/leagues/Laliga_Espanha
     """
     leagues: List[Dict[str, str]] = []
 
     if not DATA_DIR.exists():
-        return []
+        return leagues
 
-    for csv_path in DATA_DIR.glob("*.csv"):
-        name = csv_path.stem  # nome sem .csv
-        leagues.append(
-            {
-                "league_id": _slugify(name),
-                "name": name,
-                "filename": csv_path.name,
-            }
-        )
+    for item in DATA_DIR.iterdir():
+        if item.is_dir():
+            leagues.append(
+                {
+                    "league_id": item.name,  # ex: "Laliga_Espanha"
+                    "name": item.name,
+                }
+            )
 
+    leagues.sort(key=lambda x: x["name"].lower())
     return leagues
 
 
-def get_league_path(league_id: str) -> Optional[Path]:
+def get_league_dir(league_id: str) -> Optional[Path]:
     """
-    Recebe league_id (ex: 'france-ligue-1')
-    e tenta encontrar o CSV correspondente.
+    Retorna o caminho da pasta da liga.
+    Ex: DATA_DIR / "Laliga_Espanha"
     """
-    if not DATA_DIR.exists():
-        return None
-
-    for csv_path in DATA_DIR.glob("*.csv"):
-        name = csv_path.stem
-        if _slugify(name) == league_id:
-            return csv_path
-
+    league_dir = DATA_DIR / league_id
+    if league_dir.exists() and league_dir.is_dir():
+        return league_dir
     return None
 
 
 def list_teams_from_league(league_id: str) -> List[Dict[str, str]]:
     """
-    Lê o CSV da liga e devolve lista de times.
-    Assumindo que a primeira coluna é o nome do time,
-    ou que exista uma coluna chamada 'Team' ou 'team'.
+    Lista os times de uma liga com base nos arquivos CSV da pasta da liga.
+    Ex: data/leagues/Laliga_Espanha/Barcelona.csv
     """
-    csv_path = get_league_path(league_id)
-    if not csv_path or not csv_path.exists():
+    league_dir = get_league_dir(league_id)
+    if not league_dir:
         return []
+
+    teams: List[Dict[str, str]] = []
+
+    for csv_path in league_dir.glob("*.csv"):
+        team_id = csv_path.stem              # "Barcelona" ou "Real_Madrid"
+        display_name = team_id.replace("_", " ")
+        teams.append(
+            {
+                "team_id": team_id,
+                "name": display_name,
+                "filename": csv_path.name,
+            }
+        )
+
+    teams.sort(key=lambda t: t["name"].lower())
+    return teams
+
+
+def get_team_row(league_id: str, team_id: str) -> Optional[Dict[str, object]]:
+    """
+    Lê o CSV de um time específico dentro da liga e retorna a primeira linha como dict.
+    Ex: data/leagues/Laliga_Espanha/Barcelona.csv
+    """
+    league_dir = get_league_dir(league_id)
+    if not league_dir:
+        return None
+
+    # tenta nome exato
+    csv_path = league_dir / f"{team_id}.csv"
+    if not csv_path.exists():
+        # tenta trocar espaços por underline
+        alt = team_id.replace(" ", "_")
+        csv_path = league_dir / f"{alt}.csv"
+        if not csv_path.exists():
+            return None
 
     df = pd.read_csv(csv_path, sep=";", engine="python")
 
-    # tenta descobrir a coluna de nome
-    name_col = None
-    for candidate in ["Team", "team", "Nome", "nome"]:
-        if candidate in df.columns:
-            name_col = candidate
-            break
+    if df.empty:
+        return {}
 
-    if name_col is None:
-        # se não achar, usa a primeira coluna
-        name_col = df.columns[0]
-
-    teams = []
-    for raw_name in df[name_col].dropna().unique():
-        norm = normalize_name(str(raw_name))
-        teams.append(
-            {
-                "team_id": norm,
-                "name": str(raw_name),
-            }
-        )
-    return teams
+    row = df.iloc[0].to_dict()
+    row["team_id"] = team_id
+    row["league_id"] = league_id
+    row["__source_file__"] = csv_path.name
+    return row
