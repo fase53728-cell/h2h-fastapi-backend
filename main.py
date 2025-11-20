@@ -9,7 +9,7 @@ from services.leagues_service import (
 
 app = FastAPI(
     title="H2H Predictor Backend",
-    version="0.2.0",
+    version="0.3.0",
     description=(
         "Backend em FastAPI para ler CSVs por TIME dentro de pastas de ligas "
         "e servir dados para o painel H2H."
@@ -30,7 +30,7 @@ app.add_middleware(
 async def root():
     return {
         "message": "API H2H Predictor online",
-        "mode": "csv_por_time",
+        "mode": "csv_por_time_pasta_por_liga",
         "routes": [
             "/leagues",
             "/leagues/{league_id}/teams",
