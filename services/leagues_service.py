@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from typing import List, Dict, Optional
 
@@ -9,8 +8,10 @@ from config import DATA_DIR
 
 def list_leagues() -> List[Dict[str, str]]:
     """
-    Lista as ligas disponíveis como pastas dentro de data/leagues.
-    Exemplo: data/leagues/Laliga_Espanha
+    Lista as ligas disponíveis como PASTAS dentro de data/.
+    Exemplo:
+        data/laliga_espanha
+        data/premier_league
     """
     leagues: List[Dict[str, str]] = []
 
@@ -21,7 +22,7 @@ def list_leagues() -> List[Dict[str, str]]:
         if item.is_dir():
             leagues.append(
                 {
-                    "league_id": item.name,  # ex: "Laliga_Espanha"
+                    "league_id": item.name,  # ex: "laliga_espanha"
                     "name": item.name,
                 }
             )
@@ -33,7 +34,7 @@ def list_leagues() -> List[Dict[str, str]]:
 def get_league_dir(league_id: str) -> Optional[Path]:
     """
     Retorna o caminho da pasta da liga.
-    Ex: DATA_DIR / "Laliga_Espanha"
+    Ex: DATA_DIR / "laliga_espanha"
     """
     league_dir = DATA_DIR / league_id
     if league_dir.exists() and league_dir.is_dir():
@@ -43,8 +44,8 @@ def get_league_dir(league_id: str) -> Optional[Path]:
 
 def list_teams_from_league(league_id: str) -> List[Dict[str, str]]:
     """
-    Lista os times de uma liga com base nos arquivos CSV da pasta da liga.
-    Ex: data/leagues/Laliga_Espanha/Barcelona.csv
+    Lista os times de uma liga com base nos arquivos CSV dentro da pasta da liga.
+    Ex: data/laliga_espanha/Barcelona.csv
     """
     league_dir = get_league_dir(league_id)
     if not league_dir:
@@ -70,15 +71,16 @@ def list_teams_from_league(league_id: str) -> List[Dict[str, str]]:
 def get_team_row(league_id: str, team_id: str) -> Optional[Dict[str, object]]:
     """
     Lê o CSV de um time específico dentro da liga e retorna a primeira linha como dict.
-    Ex: data/leagues/Laliga_Espanha/Barcelona.csv
+    Ex: data/laliga_espanha/Barcelona.csv
     """
     league_dir = get_league_dir(league_id)
     if not league_dir:
         return None
 
+    # tenta nome direto
     csv_path = league_dir / f"{team_id}.csv"
     if not csv_path.exists():
-        # tenta normalizar nome
+        # tenta trocar espaços por underline
         alt = team_id.replace(" ", "_")
         csv_path = league_dir / f"{alt}.csv"
         if not csv_path.exists():
